@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>{{.Title}}</title>
+  <style>
+    body { font-family: Arial; background: #111; color: #fff; text-align: center; padding: 2em; }
+    video, audio { width: 90%; max-width: 900px; margin-top: 2em; border: 1px solid #444; border-radius: 12px; }
+  </style>
+</head>
+<body>
+  <h1>{{.Title}}</h1>
+  {{ if eq .MediaType "video" }}
+    <video controls autoplay>
+      <source src="{{.FileURL}}" type="{{.MimeType}}" />
+      Your browser does not support the video tag.
+    </video>
+  {{ else if eq .MediaType "audio" }}
+    <audio controls autoplay>
+      <source src="{{.FileURL}}" type="{{.MimeType}}" />
+      Your browser does not support the audio element.
+    </audio>
+  {{ else }}
+    <p><a href="{{.FileURL}}" download>Download {{.FileName}}</a></p>
+  {{ end }}
+</body>
+</html>
