@@ -5,10 +5,8 @@ import (
 	"EverythingSuckz/fsb/internal/bot"
 	"EverythingSuckz/fsb/internal/cache"
 	"EverythingSuckz/fsb/internal/routes"
-	"EverythingSuckz/fsb/internal/types"
 	"EverythingSuckz/fsb/internal/utils"
 	"fmt"
-	"net/http"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -29,24 +27,23 @@ func runApp(cmd *cobra.Command, args []string) {
 	utils.InitLogger(config.ValueOf.Dev)
 	log := utils.Logger
 	mainLogger := log.Named("Main")
+
 	mainLogger.Info("Starting server")
 
-	// Carga de configuración
+	// Load config from env or fsb.env
 	config.Load(log, cmd)
 
-	// Inicializar router con nuevas rutas y template rendering
+	// Create router and load routes
 	router := getRouter(log)
 
-	// Iniciar cliente del bot
+	// Start main bot
 	mainBot, err := bot.StartClient(log)
 	if err != nil {
 		log.Panic("Failed to start main bot", zap.Error(err))
 	}
-
-	// Inicializar caché
 	cache.InitCache(log)
 
-	// Iniciar workers
+	// Start worker pool
 	workers, err := bot.StartWorkers(log)
 	if err != nil {
 		log.Panic("Failed to start workers", zap.Error(err))
@@ -54,14 +51,15 @@ func runApp(cmd *cobra.Command, args []string) {
 	}
 	workers.AddDefaultClient(mainBot, mainBot.Self)
 
-	// Iniciar bot de usuario si está configurado
+	// Start userbot if present
 	bot.StartUserBot(log)
 
+	// Logging ready
 	mainLogger.Info("Server started", zap.Int("port", config.ValueOf.Port))
 	mainLogger.Info("File Stream Bot", zap.String("version", versionString))
 	mainLogger.Sugar().Infof("Server is running at %s", config.ValueOf.Host)
 
-	// Ejecutar servidor HTTP
+	// Start HTTP server
 	err = router.Run(fmt.Sprintf(":%d", config.ValueOf.Port))
 	if err != nil {
 		mainLogger.Sugar().Fatalln(err)
@@ -76,42 +74,10 @@ func getRouter(log *zap.Logger) *gin.Engine {
 	}
 
 	router := gin.Default()
-
-	// Middleware para log de errores HTTP
 	router.Use(gin.ErrorLogger())
 
-	// Cargar templates desde carpeta "templates"
-	router.LoadHTMLGlob("templates/*.html")
-
-	// Ruta base
-	router.GET("/", func(ctx *gin.Context) {
-		ctx.JSON(http.StatusOK, types.RootResponse{
-			Message: "Server is running.",
-			Ok:      true,
-			Uptime:  utils.TimeFormat(uint64(time.Since(startTime).Seconds())),
-			Version: versionString,
-		})
-	})
-
-	// Ruta del reproductor multimedia
-	router.GET("/watch/:id", func(ctx *gin.Context) {
-		fileID := ctx.Param("id")
-		hash := ctx.Query("hash")
-
-		if fileID == "" || hash == "" {
-			ctx.String(http.StatusBadRequest, "Missing id or hash")
-			return
-		}
-
-		streamURL := fmt.Sprintf("/stream/%s%s", hash, fileID)
-		ctx.HTML(http.StatusOK, "watch.html", gin.H{
-			"Title":     "Reproductor multimedia",
-			"FileName":  fileID,
-			"StreamURL": streamURL,
-		})
-	})
-
-	// Cargar rutas normales del bot
+	// ❌ Eliminado: router.GET("/") para evitar conflicto de doble registro
+	// ✅ Las rutas ahora se cargan desde internal/routes
 	routes.Load(log, router)
 
 	return router
