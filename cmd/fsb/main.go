@@ -26,7 +26,7 @@ var rootCmd = &cobra.Command{
 
 func init() {
 	// Registrar handler HTTP para el reproductor multimedia
-	http.HandleFunc("/stream", routes.WatchHandler)
+	http.HandleFunc("/watch", routes.WatchHandler)
 
 	// Comandos de la CLI
 	config.SetFlagsFromConfig(runCmd)
