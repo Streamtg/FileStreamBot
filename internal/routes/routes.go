@@ -1,15 +1,8 @@
 package routes
 
 import (
-	"EverythingSuckz/fsb/internal/types"
-	"EverythingSuckz/fsb/internal/utils"
-	"fmt"
-	"html/template"
-	"net/http"
-	"path/filepath"
 	"reflect"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -28,7 +21,6 @@ type allRoutes struct {
 	log *zap.Logger
 }
 
-// Cargar rutas automáticamente
 func Load(log *zap.Logger, r *gin.Engine) {
 	log = log.Named("routes")
 	defer log.Sugar().Info("Loaded all API Routes")
@@ -44,60 +36,40 @@ func Load(log *zap.Logger, r *gin.Engine) {
 	}
 }
 
-// Ruta principal "/"
-func (a *allRoutes) Root(route *Route) {
-	startTime := time.Now()
-
-	route.Engine.GET("/", func(ctx *gin.Context) {
-		ctx.JSON(http.StatusOK, types.RootResponse{
-			Message: "Server is running.",
-			Ok:      true,
-			Uptime:  utils.TimeFormat(uint64(time.Since(startTime).Seconds())),
-			Version: "3.1.0",
+// Ruta raíz (puedes mantenerla si no genera conflicto con otras)
+func (r *allRoutes) Root(route *Route) {
+	route.Engine.GET("/", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"message": "FileStreamBot is running",
+			"ok":      true,
 		})
 	})
+	r.log.Info("Loaded root route")
 }
 
-// Ruta para renderizar contenido con template HTML y reproductor
-func (a *allRoutes) Watch(route *Route) {
-	route.Engine.GET("/watch/:id", func(ctx *gin.Context) {
-		fileID := ctx.Param("id")
-		if fileID == "" {
-			ctx.String(http.StatusBadRequest, "Missing file ID")
-			return
-		}
+// Ejemplo de ruta para servir un archivo desde el sistema (completar según tu implementación)
+func (r *allRoutes) Stream(route *Route) {
+	route.Engine.GET("/file/:id", func(c *gin.Context) {
+		id := c.Param("id")
+		// Aquí deberías implementar la lógica para buscar el archivo y servirlo
+		// Por ahora, solo mostramos el ID
+		c.String(200, "Aquí iría el archivo con ID: %s", id)
+	})
+	r.log.Info("Loaded stream route")
+}
 
-		// Simulación de obtención de archivo (reemplaza por tu lógica real)
-		dummyFile := struct {
-			FileName string
-			MimeType string
-			StreamURL string
-		}{
-			FileName:  "sample_video.mp4",
-			MimeType:  "video/mp4",
-			StreamURL: fmt.Sprintf("https://your-ngrok-url.ngrok-free.app/stream/%s", fileID),
-		}
+// Nueva ruta con template y reproductor
+func (r *allRoutes) StreamPlayer(route *Route) {
+	route.Engine.GET("/stream/:id", func(c *gin.Context) {
+		fileID := c.Param("id")
 
-		// Detectar si es video o audio
-		tag := "video"
-		if strings.HasPrefix(dummyFile.MimeType, "audio") {
-			tag = "audio"
-		}
+		// Determinar si es video por extensión simple
+		isVideo := strings.HasSuffix(fileID, ".mp4") || strings.HasSuffix(fileID, ".webm") || strings.HasSuffix(fileID, ".mov")
 
-		// Cargar plantilla
-		tmplPath := filepath.Join("templates", "watch.html")
-		tmpl, err := template.ParseFiles(tmplPath)
-		if err != nil {
-			ctx.String(http.StatusInternalServerError, "Template error: %v", err)
-			return
-		}
-
-		ctx.Header("Content-Type", "text/html; charset=utf-8")
-		tmpl.Execute(ctx.Writer, gin.H{
-			"Tag":      tag,
-			"Title":    "Watch " + dummyFile.FileName,
-			"FileName": dummyFile.FileName,
-			"Src":      dummyFile.StreamURL,
+		c.HTML(200, "player.html", gin.H{
+			"FileID":  fileID,
+			"IsVideo": isVideo,
 		})
 	})
+	r.log.Info("Loaded stream player route")
 }
