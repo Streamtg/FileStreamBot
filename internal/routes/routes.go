@@ -1,6 +1,9 @@
 package routes
 
 import (
+	"fmt"
+	"net/http"
+	"path/filepath"
 	"reflect"
 	"strings"
 
@@ -36,10 +39,10 @@ func Load(log *zap.Logger, r *gin.Engine) {
 	}
 }
 
-// Ruta raíz (puedes mantenerla si no genera conflicto con otras)
+// Ruta raíz
 func (r *allRoutes) Root(route *Route) {
 	route.Engine.GET("/", func(c *gin.Context) {
-		c.JSON(200, gin.H{
+		c.JSON(http.StatusOK, gin.H{
 			"message": "FileStreamBot is running",
 			"ok":      true,
 		})
@@ -47,28 +50,32 @@ func (r *allRoutes) Root(route *Route) {
 	r.log.Info("Loaded root route")
 }
 
-// Ejemplo de ruta para servir un archivo desde el sistema (completar según tu implementación)
+// Ruta que sirve archivos desde ./downloads/
 func (r *allRoutes) Stream(route *Route) {
 	route.Engine.GET("/file/:id", func(c *gin.Context) {
 		id := c.Param("id")
-		// Aquí deberías implementar la lógica para buscar el archivo y servirlo
-		// Por ahora, solo mostramos el ID
-		c.String(200, "Aquí iría el archivo con ID: %s", id)
+		// Directorio base de archivos
+		filePath := filepath.Join("downloads", id)
+
+		c.FileAttachment(filePath, id)
 	})
-	r.log.Info("Loaded stream route")
+	r.log.Info("Loaded file stream route")
 }
 
-// Nueva ruta con template y reproductor
+// Ruta que muestra el template del reproductor
 func (r *allRoutes) StreamPlayer(route *Route) {
 	route.Engine.GET("/stream/:id", func(c *gin.Context) {
 		fileID := c.Param("id")
-
-		// Determinar si es video por extensión simple
 		isVideo := strings.HasSuffix(fileID, ".mp4") || strings.HasSuffix(fileID, ".webm") || strings.HasSuffix(fileID, ".mov")
+		isAudio := strings.HasSuffix(fileID, ".mp3") || strings.HasSuffix(fileID, ".ogg") || strings.HasSuffix(fileID, ".wav")
 
-		c.HTML(200, "player.html", gin.H{
+		fileURL := fmt.Sprintf("/file/%s", fileID)
+
+		c.HTML(http.StatusOK, "player.html", gin.H{
 			"FileID":  fileID,
+			"FileURL": fileURL,
 			"IsVideo": isVideo,
+			"IsAudio": isAudio,
 		})
 	})
 	r.log.Info("Loaded stream player route")
