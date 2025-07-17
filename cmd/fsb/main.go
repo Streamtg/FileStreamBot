@@ -23,6 +23,9 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
+	// Registrar handler HTTP para el reproductor multimedia
+	http.HandleFunc("/watch", routes.WatchHandler)
+func init() {
 	config.SetFlagsFromConfig(runCmd)
 	rootCmd.AddCommand(runCmd)
 	rootCmd.AddCommand(sessionCmd)
